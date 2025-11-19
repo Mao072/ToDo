@@ -32,8 +32,9 @@ async function register() {
       department: department.value,
       supervisor: supervisor.value
     })
-    message.value = `Registered: ${res.data.account} (id=${res.data.id})`
+    //message.value = `Registered: ${res.data.account} (id=${res.data.id})`
     // optionally redirect to login
+    window.alert('註冊成功，請使用新帳號登入')
     setTimeout(() => router.push('/login'), 700)
   } catch (err) {
     console.error(err)

@@ -1,10 +1,8 @@
 <script setup>
-import LogoBadge from './components/LogoBadge.vue'
 </script>
 
 <template>
     <div class="app-logo">
-        <LogoBadge />
     </div>
     <router-view />
 

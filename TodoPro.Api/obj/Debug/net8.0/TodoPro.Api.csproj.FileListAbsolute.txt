@@ -150,3 +150,4 @@ C:\Users\Asus\Desktop\newProject\To-Do\TodoPro.Api\bin\Debug\net8.0\Microsoft.Id
 C:\Users\Asus\Desktop\newProject\To-Do\TodoPro.Api\bin\Debug\net8.0\Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
 C:\Users\Asus\Desktop\newProject\To-Do\TodoPro.Api\bin\Debug\net8.0\Microsoft.IdentityModel.Tokens.dll
 C:\Users\Asus\Desktop\newProject\To-Do\TodoPro.Api\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
+C:\Users\Asus\Desktop\newProject\To-Do\TodoPro.Api\obj\Debug\net8.0\TodoPro.Api.sourcelink.json

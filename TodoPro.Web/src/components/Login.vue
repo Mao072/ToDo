@@ -2,37 +2,38 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api, { setAuthToken } from '../api'
+import axios from 'axios';
 
 const router = useRouter()
 const account = ref('')
 const password = ref('')
 const message = ref('')
 const loading = ref(false)
+const error = ref('');
+async function handleLogin() {
+    error.value = '';
+    try {
+        // 呼叫後端 API
+        const response = await axios.post('/api/users/login', {
+            account: account.value,
+            password: password.value
+        });
 
-async function submit() {
-  message.value = ''
-  if (!account.value || !password.value) {
-    message.value = '請填寫帳號與密碼'
-    return
-  }
-  loading.value = true
-  try {
-    const res = await api.post('/users/login', { account: account.value, password: password.value })
-    const token = res.data?.token
-    if (token) {
-      setAuthToken(token)
-      message.value = '登入成功，正在導向...'
-      // small delay for UX then redirect
-      setTimeout(() => router.push('/'), 600)
-    } else {
-      message.value = '伺服器未回傳 token'
+        const token = response.data.token;
+
+        if (token) {
+
+          localStorage.setItem('authToken', token);
+          window.alert("登入成功！");
+          router.replace('/main');
+        } else {
+            error.value = '登入失敗：後端未返回 Token';
+        }
+
+    } catch (err) {
+        console.error("Login Error:", err);
+        error.value = '登入失敗：帳號或密碼錯誤。';
     }
-  } catch (err) {
-    console.error(err)
-    message.value = err?.response?.data || err.message || String(err)
-  } finally {
-    loading.value = false
-  }
 }
 </script>
 
@@ -45,21 +46,21 @@ async function submit() {
         <div class="form">
           <div class="form-group">
             <label style="color: #000000; font-weight: bold;">帳號</label>
-            <input class="input" v-model="account" />
+            <input @keyup.enter="handleLogin" class="input" v-model="account" />
           </div>
           <div class="form-group">
             <label style="color: #000000; font-weight: bold;">密碼</label>
-            <input class="input" type="password" v-model="password" />
+            <input @keyup.enter="handleLogin" class="input" type="password" v-model="password" />
           </div>
           <div class="actions" style="margin-top:12px">
-            <button class="btn" @click="submit" :disabled="loading">登入</button>
+            <button class="btn" @keyup.enter="handleLogin" @click="handleLogin" :disabled="loading">登入</button>
           </div>
           <div class="notyet"> 
             <p style="color: #000000; font-weight: bold;">尚未註冊?</p>
             <p class="link" @click="router.push('/register')" style="color: #000000; font-weight: bold; cursor: pointer; " role="button" tabindex="0">註冊</p>
           </div>
 
-          <div v-if="message" class="message">{{ message }}</div>
+          <div v-if="error" class="message">{{ error }}</div>
         </div>
       </div>
     </div>

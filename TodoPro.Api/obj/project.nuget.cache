@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "FYZUmj/gs0Q=",
+  "dgSpecHash": "tRnKIqY9htU=",
   "success": true,
-  "projectFilePath": "c:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj",
+  "projectFilePath": "C:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Asus\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\Asus\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.0\\microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",

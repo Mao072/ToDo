@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "c:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj": {}
+    "C:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj": {}
   },
   "projects": {
-    "c:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj": {
+    "C:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "c:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj",
+        "projectUniqueName": "C:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj",
         "projectName": "TodoPro.Api",
-        "projectPath": "c:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj",
+        "projectPath": "C:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\TodoPro.Api.csproj",
         "packagesPath": "C:\\Users\\Asus\\.nuget\\packages\\",
-        "outputPath": "c:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\obj\\",
+        "outputPath": "C:\\Users\\Asus\\Desktop\\newProject\\To-Do\\TodoPro.Api\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Asus\\AppData\\Roaming\\NuGet\\NuGet.Config"

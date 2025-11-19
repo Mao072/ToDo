@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TodoPro.Api.Models;
 
@@ -8,13 +7,12 @@ public class User
     [Key]
     public int Id { get; set; }
 
-    // Supervisor flag
     public bool Supervisor { get; set; }
 
     [Required]
     public string Account { get; set; } = string.Empty;
 
-    // Store hashed password (do not store plaintext passwords or raw JWTs here)
+    // Store hashed password
     [Required]
     public string PasswordHash { get; set; } = string.Empty;
 
@@ -28,7 +26,5 @@ public class User
     // Relation: a user can have many comments
     public List<Comment> Comments { get; set; } = new();
 
-    // Optional: a user can also reference a single Todo (foreign key) if needed
-    public int? TodoId { get; set; }
-    public TodoItem? Todo { get; set; }
+
 }
