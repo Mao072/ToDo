@@ -6,8 +6,7 @@ import axios from 'axios';
 
 // 引入所有動態視圖
 import TodoList from '../views/TodoList.vue';        
-import Profile from '../views/Profile.vue'; 
-import UsersList from '../views/UsersList.vue';       
+import Profile from '../views/Profile.vue';     
 import DoneList from '../views/DoneList.vue';         
 import NewTodo from '../views/NewTodo.vue';   
 import TodoDetail from '../views/TodoDetail.vue'; // 引入 TodoDetail
@@ -31,8 +30,9 @@ function checkSupervisorStatus() {
     
     const payload = decodeJwt(token);
     if (payload) {
+        console.log('Decoded JWT Payload:', payload);
         isSupervisor.value = payload.supervisor === 'True' || payload.supervisor === true;
-        userName.value = payload.account || '用戶'; 
+        userName.value = payload.name || '用戶'; 
     }
 
     axios.get('http://localhost:5000/api/users/me', {
@@ -85,8 +85,6 @@ const currentView = computed(() => {
             return TodoList;
         case 'Profile':
             return Profile; 
-        case 'Users':
-            return UsersList;
         case 'Done':
             return DoneList;
         default:
@@ -98,7 +96,7 @@ const currentView = computed(() => {
 <template>
 <div class="main-layout">
     <aside class="sidebar" :class="{ collapsed: sidebarCollapsed }">
-        <div class="logo">TodoPro 專案</div>
+        <div class="logo">Todo 專案</div>
         
         <nav class="nav-menu">
             <!-- 菜單項：當處於詳情頁時，活動狀態應在 Todos 上 -->
@@ -125,14 +123,6 @@ const currentView = computed(() => {
                 @click="selectMenu('Profile')"
             >
                 ⚙️ 個人資料
-            </button>
-
-            <button 
-                class="menu-item" 
-                :class="{ active: activeMenu === 'Users' && !isDetailRoute }"
-                @click="selectMenu('Users')"
-            >
-                👨‍💼 團隊成員 
             </button>
             
             <button 

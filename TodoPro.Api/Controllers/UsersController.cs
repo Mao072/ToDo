@@ -92,6 +92,7 @@ public class UsersController : ControllerBase
         var claims = new[] {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim("account", user.Account),
+            new Claim("name", user.Name),
             new Claim("supervisor", user.Supervisor.ToString())
         };
 
@@ -149,5 +150,69 @@ public class UsersController : ControllerBase
         }
 
         return Ok(user);
+    }
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return Unauthorized();
+        }
+
+        var user = await _db.Users.FindAsync(currentUserId.Value);
+
+        if (user == null)
+        {
+            return NotFound("使用者不存在。");
+        }
+        
+        // 檢查新名稱是否已經被其他人使用
+        if (await _db.Users.AnyAsync(u => u.Name == dto.Name && u.Id != currentUserId.Value))
+        {
+            return BadRequest(new { message = "名稱已被其他使用者使用，請選擇新的名稱。" });
+        }
+
+        // 只更新名稱
+        user.Name = dto.Name;
+
+        await _db.SaveChangesAsync();
+        
+        // 返回更新後的資料 (可選)
+        return Ok(new { user.Id, user.Account, user.Name });
+    }
+    
+    [HttpPut("password")] // 对应前端的 changePassword
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+        var currentUserId = GetCurrentUserId();
+        if (!currentUserId.HasValue)
+        {
+            return Unauthorized();
+        }
+
+        var user = await _db.Users.FindAsync(currentUserId.Value);
+        
+        if (user == null)
+        {
+            return NotFound("使用者不存在。");
+        }
+
+        // 1. 驗證舊密碼是否正確
+        if (!PasswordHasher.Verify(user.PasswordHash, dto.OldPassword))
+        {
+            // 返回自訂錯誤訊息，供前端捕捉並提示
+            return BadRequest(new { message = "舊密碼不正確。" });
+        }
+
+
+        // 2. 更新密碼
+        user.PasswordHash = PasswordHasher.Hash(dto.NewPassword);
+        
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "密碼更新成功。" });
     }
 }

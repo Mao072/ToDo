@@ -15,7 +15,48 @@ const messages = ref([]);
 const newMessageContent = ref('');
 const isSending = ref(false);
 const currentSupervisorId = ref(null);
+const isSupervisor = ref(false);
 let chatPollInterval = null;
+
+function identifyCurrentUser() {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+        const payload = decodeJwt(token);
+        const userId = payload.sub || payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+        
+        if (userId) currentSupervisorId.value = parseInt(userId); 
+
+        // 🔥 [修正/新增] 檢查 supervisor 權限 🔥
+        const supervisorValue = payload.supervisor?.toString().toLowerCase();
+        isSupervisor.value = supervisorValue === 'true'; 
+    }
+}
+
+async function completeTodo() {
+    if (!todoId.value) return;
+
+    if (!confirm('確認要標記此任務為 [已完成] 嗎？')) {
+        return;
+    }
+
+    loading.value = true;
+    try {
+        // 假設後端 API 路徑為 PUT /api/todos/{id}/complete
+        await api.put(`/todos/${todoId.value}/complete`);
+        
+        // 成功後，重新獲取任務詳情，以更新狀態標籤
+        await fetchTodoDetail(); 
+        
+        alert('任務已成功標記為完成！');
+
+    } catch (err) {
+        console.error("Failed to complete todo:", err);
+        error.value = "標記任務為完成失敗。";
+        alert(error.value);
+    } finally {
+        loading.value = false;
+    }
+}
 
 // --- [優化] 時間格式化 (移除手動 +8，依賴瀏覽器本地時區) ---
 const formatLocalTimeLong = (utcDateString) => {
@@ -73,7 +114,7 @@ const shouldShowDateSeparator = (currentMsg, index) => {
 };
 
 // --- 輔助函式：識別當前登入的用戶 ID ---
-function identifyCurrentUser() {
+function identifyCurrentUser2() {
     const token = localStorage.getItem('authToken');
     if (token) {
         const payload = decodeJwt(token);
@@ -171,6 +212,7 @@ async function sendMessage() {
 onMounted(() => {
     identifyCurrentUser();
     fetchTodoDetail();
+    identifyCurrentUser2();
 });
 
 onUnmounted(() => {
@@ -199,12 +241,18 @@ onUnmounted(() => {
                 </span>
                 <span class="created-at">創建於: {{ formatLocalTimeLong(todoDetail.createdAt) }}</span>
             </div>
-            
+
             <div class="description-box">
                 <h3 class="font-semibold">描述:</h3>
                 <p class="font-semibold" >{{ todoDetail.description || '無詳細描述' }}</p>
             </div>
-            
+                        
+            <div v-if="isSupervisor && !todoDetail.isCompleted" class="admin-actions">
+            <button @click="completeTodo" class="btn btn-complete" :disabled="loading">
+                標記為完成
+            </button>
+        </div>
+
             <div class="member-info">
                  <h3 class="font-semibold">參與成員 ({{ todoDetail.participantCount || todoDetail.discussionGroup?.members?.length || 1 }} 人):</h3>
                  <div class="member-list">
@@ -217,7 +265,7 @@ onUnmounted(() => {
 
         <div class="chat-panel">
             <header class="chat-header">
-                討論區: {{ todoDetail.discussionGroup?.name || '無法載入群組名稱' }}
+                討論區
             </header>
 
             <div id="chat-messages" class="chat-messages">
@@ -435,7 +483,7 @@ onUnmounted(() => {
 /* 氣泡顏色 */
 .message-bubble:not(.message-self) .message-content {
     color: #2d3748; 
-    max-width: 70%;
+    max-width: 100%;
     background-color: #ffffff;
     border-bottom-left-radius: 2px;
     border: 1px solid #e2e8f0;

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted,computed } from 'vue';
 import api from '../api'; // 假設 api.js 已經配置了 Token 攔截器
 import { useRouter } from 'vue-router';
 import axios from 'axios';
@@ -8,7 +8,9 @@ const router = useRouter();
 const todos = ref([]);
 const loading = ref(true);
 const error = ref(null);
-
+const pendingTodos = computed(() => {
+    return todos.value.filter(todo => !todo.isCompleted);
+});
 function formatDateTime(dateString) {
     if (!dateString) return 'N/A';
     try {
@@ -91,7 +93,7 @@ function viewTodoDetail(todoId) {
     <div v-else class="todo-grid">
         <!-- 任務列表 -->
         <div 
-            v-for="todo in todos" 
+            v-for="todo in pendingTodos" 
             :key="todo.id" 
             class="todo-card" 
             :class="{ 'todo-completed': todo.isCompleted }"

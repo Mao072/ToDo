@@ -15,7 +15,12 @@ using System;
 public class TodosController : ControllerBase
 {
     private readonly AppDbContext _db;
-
+    private bool IsCurrentUserSupervisor()
+        {
+            var supervisorClaim = User.FindFirst("supervisor")?.Value;
+            // 根據您在 UsersController 中創建 Token 的邏輯，這裡應該是 "True" 或 "False"
+            return supervisorClaim?.Equals("True", StringComparison.OrdinalIgnoreCase) == true;
+        }
     public TodosController(AppDbContext db)
     {
         _db = db;
@@ -30,6 +35,47 @@ public class TodosController : ControllerBase
             return userId;
         return null;
     }
+
+
+        [HttpPut("{id}/complete")] // 路由為: api/Todos/{id}/complete
+        public async Task<IActionResult> CompleteTodo(int id)
+        {
+            // 1. 權限檢查：只有主管/管理員可以標記任務為完成
+            if (!IsCurrentUserSupervisor())
+            {
+                // 返回 403 Forbidden 提示權限不足
+                return StatusCode(403, "只有主管或管理員才能標記任務為完成。");
+            }
+
+            // 2. 查找待辦事項
+            var todo = await _db.Todos.FindAsync(id);
+
+            if (todo == null)
+            {
+                return NotFound("找不到指定的待辦事項。");
+            }
+
+            // 3. 檢查是否已經完成 (避免重複操作)
+            if (todo.IsCompleted)
+            {
+                return BadRequest("該任務已經標記為完成，無需重複操作。");
+            }
+
+            // 4. 更新狀態並儲存
+            todo.IsCompleted = true;
+            // 可選：記錄完成時間或完成人 ID
+            // todo.CompletedAt = DateTime.UtcNow; 
+            // todo.CompletedByUserId = GetCurrentUserId();
+
+            await _db.SaveChangesAsync();
+
+            // 返回 200 OK
+            return Ok(new { 
+                message = "任務已成功標記為完成。",
+                todoId = todo.Id,
+                isCompleted = true 
+            });
+        }
 
     /// <summary>
     /// 獲取所有待辦事項 (包含儲存在模型中的 UserCount)
