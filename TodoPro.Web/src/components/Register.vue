@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue' // 引入 onMounted
 import { useRouter } from 'vue-router'
 import api from '../api'
 
@@ -7,40 +7,69 @@ const account = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const name = ref('')
-const department = ref('')
+// 修正：用於儲存部門列表 (Array)
+const departments = ref([]) 
+// NEW：用於儲存用戶選擇的部門 ID (Number)
+const departmentId = ref(null) 
 const supervisor = ref(false)
 const message = ref('')
 const loading = ref(false)
 const router = useRouter()
 
-async function register() {
-  message.value = ''
-  if (!account.value || !password.value || !confirmPassword.value) {
-    message.value = '請填寫所有欄位（包含確認密碼）'
-    return
-  }
-  if (password.value !== confirmPassword.value) {
-    message.value = '密碼與確認密碼不一致'
-    return
-  }
-  loading.value = true
-  try {
-    const res = await api.post('/users/register', {
-      account: account.value,
-      password: password.value,
-      name: name.value,
-      department: department.value,
-      supervisor: supervisor.value
+// *** 關鍵修正：在組件加載時獲取部門列表 ***
+onMounted(() => {
+    getDepartments();
+});
+
+function getDepartments()
+{
+    // API 存取部門列表不需要 Token，因為註冊頁是公開的
+    // 但是，如果您後端 DepartmentsController 要求 [Authorize]，您需要先登入一個帳號才能測試
+    api.get('/departments')
+    .then(response => {
+        // 確保接收到的是 Array
+        departments.value = response.data; 
     })
-    //message.value = `Registered: ${res.data.account} (id=${res.data.id})`
-    // optionally redirect to login
-    window.alert('註冊成功，請使用新帳號登入')
-    setTimeout(() => router.push('/login'), 700)
-  } catch (err) {
-    console.error(err)
-    message.value = err?.response?.data || err.message || String(err)
-  }
-  finally { loading.value = false }
+    .catch(error => {
+        console.error('Failed to fetch departments:', error);
+        message.value = '無法載入部門列表，請檢查伺服器。';
+    });
+}
+
+// 修正：將 register 改為非同步
+async function register() {
+    message.value = ''
+    if (!account.value || !password.value || !confirmPassword.value) {
+        message.value = '請填寫所有必填欄位。'
+        return
+    }
+    if (password.value !== confirmPassword.value) {
+        message.value = '密碼與確認密碼不一致'
+        return
+    }
+    // NEW: 可選：檢查是否選擇了部門
+    if (!departmentId.value) {
+         message.value = '請選擇您的部門。';
+         return;
+    }
+
+    loading.value = true
+    try {
+        const res = await api.post('/users/register', {
+            account: account.value,
+            password: password.value,
+            name: name.value,
+            // *** 關鍵修正：傳遞 departmentId 而非 department 字串 ***
+            departmentId: departmentId.value,
+            supervisor: supervisor.value
+        })
+        window.alert('註冊成功！請登入您的帳號。')
+        setTimeout(() => router.push('/login'), 500)
+    } catch (err) {
+        console.error(err)
+        message.value = err?.response?.data || err.message || '註冊失敗。'
+    }
+    finally { loading.value = false }
 }
 </script>
 
@@ -59,26 +88,40 @@ async function register() {
             <label style="color: #000000; font-weight: bold;">密碼</label>
             <input class="input" type="password" v-model="password" />
           </div>
-           <div class="form-group">
+            <div class="form-group">
             <label style="color: #000000; font-weight: bold;">確認密碼</label>
             <input class="input" type="password" v-model="confirmPassword" />
           </div>
-                    <div class="form-group">
+            <div class="form-group">
             <label style="color: #000000; font-weight: bold;">名稱</label>
             <input class="input" v-model="name" />
           </div>
-            <div class="actions" style="margin-top:12px">
+          
+          <!-- *** 修正：部門選擇區塊 *** -->
+          <div class="form-group"> 
             <label style="color: #000000; font-weight: bold;">部門</label>
-            <select class="input" v-model="department" :disabled="loading">
-              <option value="">請選擇部門</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Design">Design</option>
-              <option value="HR">HR</option>
+            <!-- 綁定到 departmentId -->
+            <select class="input" v-model="departmentId" :disabled="loading || departments.length === 0">
+              <option :value="null" disabled>請選擇部門</option>
+              <!-- 遍歷 departments 列表 -->
+              <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+                {{ dept.name }}
+              </option>
             </select>
+            <p v-if="departments.length === 0 && !loading" style="color: #00000088; font-size: 0.8rem; margin-top: 5px;">
+                正在載入部門，或伺服器未提供部門列表。
+            </p>
           </div>
-          <div class="actions" style="margin-top:12px">
-            <button class="btn" @click="register" :disabled="loading">註冊</button>
+          <!-- *** 修正結束 *** -->
+          
+
+          <div class="actions" style="margin-top:20px">
+            <button class="btn" @click="register" :disabled="loading">
+                <span v-if="loading">註冊中...</span>
+                <span v-else>註冊</span>
+            </button>
           </div>
+
           <div class="notyet"> 
             <p style="color: #000000; font-weight: bold;">已經註冊?</p>
             <p class="link" @click="router.push('/login')" style="color: #000000; font-weight: bold; cursor: pointer; " role="button" tabindex="0">登入</p>

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TodoPro.Api.Data;
 
@@ -11,9 +12,11 @@ using TodoPro.Api.Data;
 namespace TodoPro.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251120040414_1120")]
+    partial class _1120
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -67,7 +70,7 @@ namespace TodoPro.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Departments");
+                    b.ToTable("Department");
                 });
 
             modelBuilder.Entity("TodoPro.Api.Models.Group", b =>
@@ -93,15 +96,9 @@ namespace TodoPro.Api.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<int?>("TodoItemId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("LatestMessageId")
-                        .IsUnique();
-
-                    b.HasIndex("TodoItemId")
                         .IsUnique();
 
                     b.ToTable("Groups");
@@ -156,6 +153,9 @@ namespace TodoPro.Api.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("longtext");
 
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("tinyint(1)");
 
@@ -163,13 +163,13 @@ namespace TodoPro.Api.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<int>("UserCount")
-                        .HasColumnType("int");
-
                     b.Property<int?>("UserId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("GroupId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -258,14 +258,7 @@ namespace TodoPro.Api.Migrations
                         .HasForeignKey("TodoPro.Api.Models.Group", "LatestMessageId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("TodoPro.Api.Models.TodoItem", "RelatedTodoItem")
-                        .WithOne("DiscussionGroup")
-                        .HasForeignKey("TodoPro.Api.Models.Group", "TodoItemId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.Navigation("LatestMessage");
-
-                    b.Navigation("RelatedTodoItem");
                 });
 
             modelBuilder.Entity("TodoPro.Api.Models.Message", b =>
@@ -289,10 +282,17 @@ namespace TodoPro.Api.Migrations
 
             modelBuilder.Entity("TodoPro.Api.Models.TodoItem", b =>
                 {
+                    b.HasOne("TodoPro.Api.Models.Group", "DiscussionGroup")
+                        .WithOne("RelatedTodoItem")
+                        .HasForeignKey("TodoPro.Api.Models.TodoItem", "GroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TodoPro.Api.Models.User", "User")
                         .WithMany("Todos")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DiscussionGroup");
 
                     b.Navigation("User");
                 });
@@ -342,14 +342,14 @@ namespace TodoPro.Api.Migrations
                 {
                     b.Navigation("Messages");
 
+                    b.Navigation("RelatedTodoItem");
+
                     b.Navigation("UserGroups");
                 });
 
             modelBuilder.Entity("TodoPro.Api.Models.TodoItem", b =>
                 {
                     b.Navigation("Comments");
-
-                    b.Navigation("DiscussionGroup");
                 });
 
             modelBuilder.Entity("TodoPro.Api.Models.User", b =>

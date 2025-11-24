@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema; 
 
 namespace TodoPro.Api.Models;
 
@@ -18,7 +19,9 @@ public class User
 
     public string Name { get; set; } = string.Empty;
 
-    public string? Department { get; set; }
+    public int? DepartmentId { get; set; }
+    [ForeignKey("DepartmentId")]
+    public Department? Department { get; set; }
 
     // Relation: a user can have many todos
     public List<TodoItem> Todos { get; set; } = new();

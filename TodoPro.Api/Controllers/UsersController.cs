@@ -8,6 +8,9 @@ using TodoPro.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using TodoPro.Api.Models;
 using Microsoft.Extensions.Configuration; // 確保 IConfiguration 被正確引用
+using Microsoft.AspNetCore.Authorization; 
+using Microsoft.AspNetCore.Mvc;
+using TodoPro.Api.Dtos;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -33,7 +36,7 @@ public class UsersController : ControllerBase
         {
             Account = dto.Account,
             Name = dto.Name,
-            Department = dto.Department,
+            DepartmentId = dto.DepartmentId,
             Supervisor = dto.Supervisor
         };
         // 確保 PasswordHasher 類別可被存取
@@ -104,8 +107,47 @@ public class UsersController : ControllerBase
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+        
+    }
+        /// 獲取當前登入使用者的詳細資訊 
+        private int? GetCurrentUserId()
+    {
+        var sub = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? 
+                  User.FindFirst("sub")?.Value;
+        if (int.TryParse(sub, out var userId))
+            return userId;
+        return null;
+    }
+    [HttpGet("me")]
+    [Authorize] // 確保只有持有有效 Token 的用戶才能訪問
+    public async Task<IActionResult> GetMe()
+    {
+        var currentUserId = GetCurrentUserId();
+        
+        if (!currentUserId.HasValue) 
+        {
+            // 理論上 [Authorize] 已經會攔截無效請求，這裡作為雙重檢查
+            return Unauthorized("無法從 Token 中獲取使用者 ID。"); 
+        }
+
+        // 從資料庫查詢該使用者
+        var user = await _db.Users
+            .Where(u => u.Id == currentUserId.Value)
+            .Select(u => new
+            {
+                u.Id,
+                u.Account,
+                u.Name,       // 這裡回傳 Name，供前端顯示「你好! XXX」
+                u.Department,
+                u.Supervisor
+            })
+            .FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            return NotFound("使用者不存在或已被刪除。");
+        }
+
+        return Ok(user);
     }
 }
-
-public record LoginDto(string Account, string Password);
-public record RegisterDto(string Account, string Password, string Name, string? Department, bool Supervisor);

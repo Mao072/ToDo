@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -26,7 +28,10 @@ namespace TodoPro.Api.Models
         [ForeignKey("LatestMessageId")]
         public Message? LatestMessage { get; set; }
 
-        // NEW: 反向導航屬性，連結回對應的 TodoItem
-        public TodoItem? RelatedTodoItem { get; set; }
+        // *** 修正：新增外來鍵，指向其 Principal (TodoItem) ***
+        public int? TodoItemId { get; set; } // Group 現在擁有 FK
+        [ForeignKey("TodoItemId")]
+        public TodoItem? RelatedTodoItem { get; set; } // 反向導航屬性
+        // *** 修正結束 ***
     }
 }

@@ -6,8 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System.Linq; 
 using System.Threading.Tasks;
-// 假設 TodoCreateDto 在 TodoPro.Api.Dtos 中
 using TodoPro.Api.Dtos; 
+using System; 
 
 [ApiController]
 [Route("api/[controller]")]
@@ -32,19 +32,17 @@ public class TodosController : ControllerBase
     }
 
     /// <summary>
-    /// 獲取所有待辦事項 (不進行用戶過濾)
+    /// 獲取所有待辦事項 (包含儲存在模型中的 UserCount)
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        // 移除所有用戶篩選邏輯，回傳所有待辦事項
-        var list = await _db.Todos
-            .Include(t => t.User) // 待辦事項擁有者
-            .Include(t => t.Comments).ThenInclude(c => c.User) // 評論和評論者
-            .Include(t => t.DiscussionGroup)
-            
-            // 由於不需要過濾，此處暫時不包含 DiscussionGroup.UserGroups，以減少數據負載
-            
+        var todosQuery = _db.Todos
+            .Include(t => t.User).ThenInclude(u => u!.Department) // 載入 User 和 Department
+            .Include(t => t.Comments).ThenInclude(c => c.User) // 載入 Comments
+            .Include(t => t.DiscussionGroup); // 載入群組
+
+        var list = await todosQuery
             .Select(t => new 
             {
                 t.Id,
@@ -53,23 +51,95 @@ public class TodosController : ControllerBase
                 t.IsCompleted,
                 t.CreatedAt,
                 t.UserId,
-                User = t.User == null ? null : new { t.User.Id, t.Account, t.Name, t.Department },
+                
+                // 查詢模型中的 UserCount 欄位
+                ParticipantCount = t.UserCount, 
+                
+                // User 投影
+                User = t.User == null ? null : new 
+                { 
+                    t.User.Id, 
+                    t.User.Account, 
+                    t.User.Name, 
+                    DepartmentId = t.User.DepartmentId,
+                    DepartmentName = t.User.Department != null ? t.User.Department.Name : null
+                }, 
+                
                 Comments = t.Comments.Select(c => new 
                 { 
                     c.Id, c.Content, c.CreatedAt, c.UserId, 
                     User = c.User == null ? null : new { c.User.Id, c.User.Account, c.User.Name } 
                 }).ToList(),
+                
                 DiscussionGroup = t.DiscussionGroup == null ? null : new 
                 { 
                     t.DiscussionGroup.Id, 
                     t.DiscussionGroup.Name,
-                    // 不再包含 Members 列表
                 }
             })
             .ToListAsync();
 
         return Ok(list);
     }
+    
+    /// <summary>
+    /// 獲取單個待辦事項的詳細信息 (用於詳情頁和聊天)
+    /// </summary>
+    [HttpGet("{id}")]
+public async Task<IActionResult> Get(int id)
+{
+    // 這裡我們不應該對 todo 進行任何基於當前用戶 ID 的過濾。
+    // 任務是否存在的檢查應該只基於 'id'。
+    var todo = await _db.Todos
+        // 確保載入 DiscussionGroup 及其成員
+        .Include(t => t.DiscussionGroup)
+            .ThenInclude(g => g!.UserGroups)
+                .ThenInclude(ug => ug.User)
+        .Include(t => t.User).ThenInclude(u => u!.Department)
+        // *** 關鍵：只根據 ID 進行查詢 ***
+        .Where(t => t.Id == id) 
+        .Select(t => new
+        {
+            t.Id,
+            t.Title,
+            t.Description,
+            t.IsCompleted,
+            t.CreatedAt,
+            t.UserId,
+            
+            // 投影所有必要數據
+            ParticipantCount = t.UserCount, 
+            User = t.User == null ? null : new 
+            { 
+                t.User.Id, 
+                t.User.Account, 
+                t.User.Name, 
+            },
+            
+            DiscussionGroup = t.DiscussionGroup == null ? null : new
+            {
+                t.DiscussionGroup.Id,
+                t.DiscussionGroup.Name,
+                Members = t.DiscussionGroup.UserGroups.Select(ug => new
+                {
+                    ug.User.Id,
+                    ug.User.Account,
+                    ug.User.Name
+                }).ToList()
+            }
+        })
+        .FirstOrDefaultAsync();
+
+    if (todo == null)
+    {
+        // 任務不存在，返回 404
+        return NotFound($"找不到 ID 為 {id} 的任務。");
+    }
+
+    // 任務存在，返回 200 OK
+    return Ok(todo);
+}
+
 
     /// <summary>
     /// 創建新的待辦事項 (Supervisor 權限)
@@ -84,33 +154,34 @@ public class TodosController : ControllerBase
         var isSupervisor = User.FindFirst("supervisor")?.Value == "True";
         if (!isSupervisor) return Forbid("只有 Supervisor 才能新增工作。");
 
+        var usersToAssign = dto.AssignedUserIds.Distinct().ToList();
+
+        if (!usersToAssign.Contains(currentUserId.Value)) {
+            usersToAssign.Add(currentUserId.Value);
+        }
+
         // 1. 建立 TodoItem
         var newItem = new TodoItem
         {
             Title = dto.Title,
             Description = dto.Description,
-            UserId = currentUserId, // 創建者是擁有者/指派者
+            UserId = currentUserId, 
             IsCompleted = false,
+            // 在創建時寫入 UserCount
+            UserCount = usersToAssign.Count 
         };
         
         // 2. 建立專屬討論群組
         var discussionGroup = new Group
         {
-            Name = $"Todo-{dto.Title}-Discussion",
-            Description = $"Discussion group for Todo Item: {dto.Title}",
+            Name = $"{dto.Title} ({Guid.NewGuid().ToString().Substring(0, 4)})",
+            Description = $"{dto.Title}",
         };
         _db.Groups.Add(discussionGroup);
         newItem.DiscussionGroup = discussionGroup; 
         _db.Todos.Add(newItem);
-        
-        // 3. 將指派成員加入群組
-        var usersToAssign = dto.AssignedUserIds.Distinct().ToList();
 
-        // 確保創建者自己也在群組內
-        if (!usersToAssign.Contains(currentUserId.Value)) {
-            usersToAssign.Add(currentUserId.Value);
-        }
-
+        // 3. 指派成員
         foreach (var assignedUserId in usersToAssign)
         {
             var userGroup = new UserGroup 
@@ -123,12 +194,13 @@ public class TodosController : ControllerBase
         
         await _db.SaveChangesAsync();
         
+        // 返回新增的項目及參與人數
         return Ok(new 
         { 
             newItem.Id, 
             newItem.Title, 
             DiscussionGroupId = discussionGroup.Id,
-            AssignedMembers = usersToAssign
+            ParticipantCount = newItem.UserCount 
         });
     }
 
@@ -139,16 +211,18 @@ public class TodosController : ControllerBase
     public async Task<IActionResult> GetUsers()
     {
         var users = await _db.Users
+            .Include(u => u.Department) // 確保 Department 載入
             .Select(u => new 
             {
                 u.Id,
                 u.Account,
                 u.Name,
-                u.Department,
-                u.Supervisor // 可選：是否顯示 supervisor 狀態
+                u.Supervisor,
+                DepartmentId = u.DepartmentId,
+                DepartmentName = u.Department != null ? u.Department.Name : null,
             })
             .ToListAsync();
-
+        
         return Ok(users);
     }
 }

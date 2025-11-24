@@ -3,7 +3,6 @@ import HelloWorld from '../components/HelloWorld.vue'
 import Login from '../components/Login.vue'
 import Register from '../components/Register.vue'
 import Main from '../components/Main.vue'
-
 const routes = [
     { path: '/', name: 'home', component: HelloWorld },
     { path: '/login', name: 'login', component: Login },
@@ -13,6 +12,12 @@ const routes = [
         name: 'main', 
         component: Main,
         // *** 新增：明確指出此頁面需要認證 ***
+        meta: { requiresAuth: true } 
+    },
+    { 
+        path: '/todo/:id', 
+        name: 'todo-detail-layout', 
+        component: Main, // 讓 Main.vue 處理佈局
         meta: { requiresAuth: true } 
     }
 ]
